@@ -1,0 +1,21 @@
+{
+  "name": "fn-parser",
+  "version": "1.0.0",
+  "description": "An extremely simple parser combinator for TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "repository": "https://github.com/ryohey/fn-parser.git",
+  "author": "ryohey",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^24.0.15",
+    "jest": "^24.8.0",
+    "prettier": "^1.18.2",
+    "ts-jest": "^24.0.2",
+    "typescript": "3.5.3"
+  }
+}
