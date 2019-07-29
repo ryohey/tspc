@@ -1,5 +1,5 @@
 {
-  "name": "fn-parser",
+  "name": "tspc",
   "version": "1.0.0",
   "description": "An extremely simple parser combinator for TypeScript",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
     "build": "tsc",
     "test": "jest"
   },
-  "repository": "https://github.com/ryohey/fn-parser.git",
+  "repository": "https://github.com/ryohey/tspc.git",
   "author": "ryohey",
   "license": "MIT",
   "devDependencies": {
