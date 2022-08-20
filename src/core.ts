@@ -1,8 +1,16 @@
-// 戻り値の最後はデバッグ情報
-export type Parser<T, S> = (
-  target: T,
-  position: number
-) => [boolean, S, number, string?]
+export type Result<T> =
+  | {
+      success: true
+      position: number
+      value: T
+    }
+  | {
+      success: false
+      position: number
+      error: string
+    }
+
+export type Parser<T, S> = (target: T, position: number) => Result<S>
 
 export function seq<T, P0, P1>(
   ...parsers: [Parser<T, P0>, Parser<T, P1>]
@@ -46,17 +54,25 @@ export function seq<T, P0, P1, P2, P3, P4, P5, P6>(
 export function seq<T, P0>(...parsers: Parser<T, P0>[]): Parser<T, P0[]>
 export function seq<T, S>(...parsers: Parser<T, S>[]): Parser<T, S[]> {
   return (target, position) => {
-    const result = []
+    const result: S[] = []
     for (let parser of parsers) {
       const parsed = parser(target, position)
-      if (parsed[0]) {
-        result.push(parsed[1])
-        position = parsed[2]
+      if (parsed.success === true) {
+        result.push(parsed.value)
+        position = parsed.position
       } else {
-        return [false, null, position, `seq@${position}: ${parsed[3]}`]
+        return {
+          success: false,
+          position,
+          error: `seq@${position}: ${parsed.error}`,
+        }
       }
     }
-    return [true, result, position]
+    return {
+      success: true,
+      value: result,
+      position,
+    }
   }
 }
 
@@ -94,18 +110,17 @@ export function or<T>(...parsers: Parser<T, any>[]): Parser<T, any> {
     const errors: string[] = []
     for (let parser of parsers) {
       const parsed = parser(target, position)
-      if (parsed[0]) {
+      if (parsed.success === true) {
         return parsed
       } else {
-        errors.push(parser[2])
+        errors.push(parsed.error)
       }
     }
-    return [
-      false,
-      null,
+    return {
+      success: false,
       position,
-      `or@${position}: expected ${errors.join(" or ")}`,
-    ]
+      error: `or@${position}: expected ${errors.join(" or ")}`,
+    }
   }
 }
 
@@ -123,10 +138,14 @@ export const opt =
   <T, S>(parser: Parser<T, S>, defaultValue: S = null): Parser<T, S | null> =>
   (target, position) => {
     const result = parser(target, position)
-    if (result[0]) {
+    if (result.success === true) {
       return result
     }
-    return [true, defaultValue, position, `opt@${position}: ${result[3]}`]
+    return {
+      success: true,
+      value: defaultValue,
+      position: position,
+    }
   }
 
 export const many =
@@ -135,27 +154,43 @@ export const many =
     const result = []
     while (true) {
       const parsed = parser(target, position)
-      if (parsed[0]) {
-        result.push(parsed[1])
-        position = parsed[2]
+      if (parsed.success) {
+        result.push(parsed.value)
+        position = parsed.position
       } else {
         break
       }
     }
     if (result.length === 0) {
-      return [false, null, position, `many@${position}: cannot parse`]
+      return {
+        success: false,
+        position,
+        error: `many@${position}: cannot parse`,
+      }
     }
-    return [true, result, position]
+    return {
+      success: true,
+      value: result,
+      position,
+    }
   }
 
 export const map =
   <T, S, U>(parser: Parser<T, S>, transform: (value: S) => U): Parser<T, U> =>
   (target, position) => {
     const result = parser(target, position)
-    if (result[0]) {
-      return [result[0], transform(result[1]), result[2]]
+    if (result.success === true) {
+      return {
+        success: true,
+        value: transform(result.value),
+        position: result.position,
+      }
     } else {
-      return [false, null, result[2], `map@${position}: ${result[3]}`]
+      return {
+        success: false,
+        position,
+        error: `map@${position}: ${result.error}`,
+      }
     }
   }
 
@@ -166,21 +201,27 @@ export const transform =
   ): Parser<T, U> =>
   (target, position) => {
     const result = transformParser(target, position)
-    if (!result[0]) {
-      return [false, null, position, `transform@${position}: ${result[2]}`]
+    if (!result.success) {
+      return {
+        success: false,
+        position,
+        error: `transform@${position}: ${result.position}`,
+      }
     }
-    return parser(result[1], 0)
+    return parser(result.value, 0)
   }
 
-export const fail: Parser<any, null> = (_: any, position: number) => [
-  false,
-  null,
+export const fail: Parser<any, null> = (_: any, position: number) => ({
+  success: false,
   position,
-  `fail@${position}`,
-]
+  error: `fail@${position}`,
+})
 
-export const pass = <T>(target: T[], position: number) =>
-  [true, target[position], position + 1] as ReturnType<Parser<T[], T>>
+export const pass = <T>(target: T[], position: number) => ({
+  success: true,
+  value: target[position],
+  position: position + 1,
+})
 
 export const seqMap =
   <T, S, R>(
@@ -189,10 +230,14 @@ export const seqMap =
   ): Parser<T, R> =>
   (target, position) => {
     const result = parser(target, position)
-    if (!result[0]) {
-      return [false, null, position, result[3]]
+    if (result.success === false) {
+      return {
+        success: false,
+        position,
+        error: result.error,
+      }
     }
-    return next(result[1])(target, result[2])
+    return next(result.value)(target, result.position)
   }
 
 export const vec =
@@ -201,18 +246,21 @@ export const vec =
     const result = []
     for (let i = 0; i < size; i++) {
       const parsed = parser(target, position)
-      if (parsed[0]) {
-        result.push(parsed[1])
-        position = parsed[2]
+      if (parsed.success === true) {
+        result.push(parsed.value)
+        position = parsed.position
       } else {
-        return [false, null, position, `vec@${position}: ${parsed[3]}`]
+        return {
+          success: false,
+          position,
+          error: `vec@${position}: ${parsed.error}`,
+        }
       }
     }
-    return [true, result, position]
+    return { success: true, value: result, position }
   }
 
 // this does not advance the position, but succeeds to parse and returns result
 export const terminate =
   <S, T>(result: T): Parser<S, T> =>
-  (_, position) =>
-    [true, result, position]
+  (_, position) => ({ success: true, value: result, position })
