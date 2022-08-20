@@ -4,7 +4,7 @@ export const token = <T extends string>(word: T): Parser<string, T> => (
   target,
   position
 ) =>
-  target.substr(position, word.length) === word
+  target.substring(position, position + word.length) === word
     ? [true, word, position + word.length]
     : [
         false,
