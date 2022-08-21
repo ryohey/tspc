@@ -11,7 +11,7 @@ npm install tspc
 ## Example
 
 ```ts
-const part = map(vec(num, 3), (str) => parseInt(str))
+const part = map(many(num), (arr) => parseInt(arr.join("")))
 const ipString = seq(part, token("."), part, token("."), part, token("."), part)
 const ipParser = map(ipString, ([a, _, b, __, c, ___, d]) => [a, b, c, d])
 ipParser("192.168.0.1", 0).value // [192, 168, 0, 1]
