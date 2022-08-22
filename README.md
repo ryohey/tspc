@@ -1,4 +1,4 @@
-# fn-parser
+# tspc
 
 A Strongly-typed parser combinator written in TypeScript, heavily inspired by [fnparse.js](https://github.com/anatoo/fnparse.js).
 
